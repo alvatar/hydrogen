@@ -1,4 +1,5 @@
 // TODO: Checks
+// TODO: Create script, ensure both tokens are provided or none
 
 contract;
 
@@ -21,6 +22,7 @@ use std::{
 
 enum Error {
     InsufficientFunds: (),
+    IncorrectAssetId: (),
 }
 
 storage {
@@ -43,7 +45,9 @@ storage {
 
 abi HydrogenSwap {
     #[storage(write)]fn constructor(asset_id_1: ContractId, asset_id_2: ContractId);
-    #[storage(read, write)]fn provide(amount_1: u64, amount_2: u64);
+    //#[storage(read, write)]fn provide(amount_1: u64, amount_2: u64);
+    #[storage(read, write)]fn provide_1();
+    #[storage(read, write)]fn provide_2();
     #[storage(read,write)]fn swap1();
 }
 
@@ -53,23 +57,45 @@ impl HydrogenSwap for Contract {
         storage.asset_id_2 = asset_id_2;
     }
 
-    #[storage(read, write)] fn provide(amount_1: u64, amount_2: u64) {
-        require(msg_amount() > 0, Error::InsufficientFunds);
+    // #[storage(read, write)] fn provide(amount_1: u64, amount_2: u64) {
+    //     require(msg_amount() > 0, Error::InsufficientFunds);
 
-        // TODO: check that the amounts are correct
-        storage.k = ~U128::from(0, amount_1) * ~U128::from(0, amount_2);
-        storage.asset_amount_1 += storage.asset_amount_1 + amount_1;
-        storage.asset_amount_2 += storage.asset_amount_2 + amount_2;
+    //     // TODO: check that the amounts are correct
+    //     storage.k = ~U128::from(0, amount_1) * ~U128::from(0, amount_2);
+    //     storage.asset_amount_1 += storage.asset_amount_1 + amount_1;
+    //     storage.asset_amount_2 += storage.asset_amount_2 + amount_2;
+        
+    //     let sender = get_msg_sender_address_or_panic();        
+    //     let provider_amount_1 = storage.providers.get((sender, storage.asset_id_1)) + amount_1;
+    //     storage.providers.insert((sender, storage.asset_id_1), provider_amount_1);
+    //     let provider_amount_2 = storage.providers.get((sender, storage.asset_id_2)) + amount_2;
+    //     storage.providers.insert((sender, storage.asset_id_2), provider_amount_2);
+
+    //     // TODO transfer FROM sender
+    //     // force_transfer_to_contract(amount_1, storage.asset_id_1, contract_id());
+    //     // This needs to be done as two separate "provide" calls, tied together with a script
+    // }
+
+    #[storage(read, write)] fn provide_1() {
+        require(msg_amount() > 0, Error::InsufficientFunds);
+        require(msg_asset_id() == storage.asset_id_1, Error::IncorrectAssetId);
+
+        let sender = get_msg_sender_address_or_panic();        
+        let provider_amount_1 = storage.providers.get((sender, storage.asset_id_1)) + msg_amount();
+        storage.providers.insert((sender, storage.asset_id_1), provider_amount_1);
+
+        storage.asset_amount_1 += storage.asset_amount_1 + msg_amount();        
+    }
+
+    #[storage(read, write)] fn provide_2() {
+        require(msg_amount() > 0, Error::InsufficientFunds);
+        require(msg_asset_id() == storage.asset_id_2, Error::IncorrectAssetId);
         
         let sender = get_msg_sender_address_or_panic();        
-        let provider_amount_1 = storage.providers.get((sender, storage.asset_id_1)) + amount_1;
-        storage.providers.insert((sender, storage.asset_id_1), provider_amount_1);
-        let provider_amount_2 = storage.providers.get((sender, storage.asset_id_2)) + amount_2;
+        let provider_amount_2 = storage.providers.get((sender, storage.asset_id_2)) + msg_amount();
         storage.providers.insert((sender, storage.asset_id_2), provider_amount_2);
 
-        // TODO transfer FROM sender
-        // force_transfer_to_contract(amount_1, storage.asset_id_1, contract_id());
-        // This needs to be done as two separate "provide" calls, tied together with a script
+        storage.asset_amount_2 += storage.asset_amount_2 + msg_amount();
     }
 
     #[storage(read, write)] fn swap1() {
